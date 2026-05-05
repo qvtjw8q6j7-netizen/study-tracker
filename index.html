@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>日拱一卒 · 学习登记</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0984e3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="日拱一卒">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', 'PingFang SC', Microsoft YaHei, sans-serif; background:#f0f4f8; color:#2c3e50; padding:20px; max-width:700px; margin:0 auto; }
+        .header { text-align:center; margin-bottom:16px; }
+        .header h1 { font-size:2rem; margin-bottom:4px; }
+        .alert { background:#ffeaa7; border-left:5px solid #fdcb6e; padding:14px; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+        .alert.hidden { display:none; }
+        .btn { border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; transition:0.2s; }
+        .btn-primary { background:#0984e3; color:white; }
+        .btn-primary:hover { background:#0767b3; }
+        .btn-secondary { background:#dfe6e9; color:#2d3436; }
+        .btn-secondary:hover { background:#b2bec3; }
+        .form-card, .summary-card { background:white; padding:18px; border-radius:16px; box-shadow:0 4px 14px rgba(0,0,0,0.05); margin-bottom:18px; }
+        .form-row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; align-items:flex-end; }
+        .form-group { display:flex; flex-direction:column; flex:1 1 160px; }
+        label { font-weight:600; font-size:0.9rem; margin-bottom:4px; color:#555; }
+        input, select, textarea { padding:10px; border:1px solid #ddd; border-radius:8px; font-size:0.95rem; background:#fafafa; }
+        input:focus, select:focus, textarea:focus { outline:none; border-color:#0984e3; background:#fff; }
+        .btn-add { background:#00b894; color:white; border:none; padding:12px; border-radius:10px; font-weight:bold; width:100%; margin-top:6px; cursor:pointer; }
+        .btn-add:hover { background:#00a381; }
+        .record-item { display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee; font-size:0.9rem; }
+        .subject-tag { display:inline-block; background:#0984e3; color:white; padding:2px 10px; border-radius:20px; font-size:0.8rem; margin-right:8px; }
+        .delete-btn { background:transparent; border:none; color:#d63031; font-size:1.2rem; cursor:pointer; }
+        .stat-controls { display:flex; gap:8px; margin-bottom:15px; flex-wrap:wrap; }
+        .stat-controls button { border:2px solid #0984e3; background:white; color:#0984e3; padding:6px 14px; border-radius:20px; font-weight:600; cursor:pointer; }
+        .stat-controls button.active { background:#0984e3; color:white; }
+        .bar-container { width:100%; background:#ecf0f1; border-radius:10px; height:18px; overflow:hidden; }
+        .bar-fill { height:100%; background:#6c5ce7; border-radius:10px; transition: width 0.5s; }
+        .sync-area { margin-top:14px; display:flex; gap:10px; justify-content:center; }
+        .subject-other-note { display:none; font-size:0.85rem; color:#e17055; }
+        .weekday-box {
+            display: flex; align-items: center; min-width: 90px; padding: 10px 0;
+            font-size: 1.1rem; font-weight: 600; color: #0984e3;
+            background: #f0f7ff; border-radius: 8px; justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>日拱一卒，功不唐捐</h1>
+        <div id="subtitle" style="color:#636e72;"></div>
+    </div>
+
+    <div id="alertBox" class="alert hidden">
+        <span id="alertMsg"></span>
+        <div>
+            <button class="btn btn-primary" id="btnFill">📝 补录</button>
+            <button class="btn btn-secondary" id="btnRest">😴 休息</button>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <h3 style="margin-bottom:14px;">✍️ 今日登记</h3>
+        <div class="form-row">
+            <div class="form-group" style="flex:0 1 150px;">
+                <label>📅 日期</label>
+                <input type="date" id="inputDate">
+            </div>
+            <div class="form-group" style="flex:0 1 auto; justify-content:flex-end;">
+                <label>📌 星期</label>
+                <div class="weekday-box"><span id="inputWeekday"></span></div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>⏳ 时段</label>
+                <select id="inputPeriod">
+                    <option value="放学途中">放学途中</option>
+                    <option value="周一至周五晚自习后" selected>周一至周五晚自习后</option>
+                    <option value="周六上午">周六上午</option>
+                    <option value="周六下午">周六下午</option>
+                    <option value="周六晚上">周六晚上</option>
+                    <option value="周日上午">周日上午</option>
+                    <option value="周日下午">周日下午</option>
+                    <option value="周日晚上">周日晚上</option>
+                    <option value="法定假日上午">法定假日上午</option>
+                    <option value="法定假日下午">法定假日下午</option>
+                    <option value="法定假日晚上">法定假日晚上</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>📚 学科</label>
+                <select id="inputSubject">
+                    <option value="语文">语文</option>
+                    <option value="数学">数学</option>
+                    <option value="英语">英语</option>
+                    <option value="物理">物理</option>
+                    <option value="化学">化学</option>
+                    <option value="地理">地理</option>
+                    <option value="学校作业">学校作业</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>⏱️ 时长(分)</label>
+                <input type="number" id="inputDuration" value="45" min="0" max="300" step="5">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>📋 事项</label>
+                <select id="inputTaskSelect"></select>
+                <span id="otherHint" class="subject-other-note">已选“其他”，请在下方内容简纪中写明具体事项。</span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>📝 内容简纪</label>
+                <textarea id="inputNote" rows="2" placeholder="回顾收获、错因或具体事项…"></textarea>
+            </div>
+        </div>
+        <button class="btn-add" id="addRecordBtn">➕ 添加记录</button>
+    </div>
+
+    <div class="summary-card">
+        <h3>📊 学习分析</h3>
+        <div class="stat-controls">
+            <button class="active" data-range="week">本周</button>
+            <button data-range="month">本月</button>
+            <button data-range="all">全部</button>
+        </div>
+        <div id="statisticsContainer"></div>
+    </div>
+
+    <div class="summary-card">
+        <h3>📋 最近记录</h3>
+        <div id="recordsList"></div>
+    </div>
+
+    <div class="sync-area">
+        <button class="btn btn-secondary" id="exportBtn">📤 导出数据</button>
+        <button class="btn btn-secondary" id="importBtn">📥 导入数据</button>
+    </div>
+    <p style="text-align:center; font-size:0.8rem; color:#aaa; margin-top:8px;">
+        ⭐ 已安装为 PWA · 可离线使用<br>📥 定期导出备份，安全无忧
+    </p>
+
+    <!-- Service Worker 注册 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(reg => {
+                    console.log('SW registered:', reg.scope);
+                }).catch(err => {
+                    console.log('SW registration failed:', err);
+                });
+            });
+        }
+    </script>
+
+    <!-- 主应用逻辑 -->
+    <script>
+        (function() {
+            const STORAGE_KEY = 'study_records_v3';
+            let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+            const taskMap = {
+                '语文': ['背诵', '文言文练习', '作文/阅读理解', '其他'],
+                '数学': ['知识点学习&练习', '补习归纳整理', '数学补习', '其他'],
+                '英语': ['单词专项', '阅读', '其他'],
+                '物理': ['知识点学习&练习', '其他'],
+                '化学': ['知识点学习&练习', '其他'],
+                '地理': ['知识点学习&练习', '其他'],
+                '学校作业': ['学校作业', '其他']
+            };
+
+            const dateInput = document.getElementById('inputDate');
+            const inputWeekday = document.getElementById('inputWeekday');
+            const periodSelect = document.getElementById('inputPeriod');
+            const subjectSelect = document.getElementById('inputSubject');
+            const durationInput = document.getElementById('inputDuration');
+            const taskSelect = document.getElementById('inputTaskSelect');
+            const noteInput = document.getElementById('inputNote');
+            const otherHint = document.getElementById('otherHint');
+            const alertBox = document.getElementById('alertBox');
+            const alertMsg = document.getElementById('alertMsg');
+            const subtitleDiv = document.getElementById('subtitle');
+            const statisticsDiv = document.getElementById('statisticsContainer');
+            const recordsDiv = document.getElementById('recordsList');
+
+            function getTodayStr() { return new Date().toISOString().slice(0,10); }
+            function getWeekdayStr(dateStr) {
+                let d = new Date(dateStr + 'T00:00:00');
+                return ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][d.getDay()];
+            }
+            function formatDate(dateStr) {
+                let d = new Date(dateStr + 'T00:00:00');
+                return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+            }
+
+            function resetDateToToday() {
+                let today = getTodayStr();
+                dateInput.value = today;
+                dateInput.max = today;
+                inputWeekday.textContent = getWeekdayStr(today);
+                updateSubtitle();
+            }
+            dateInput.addEventListener('change', ()=>{
+                if(dateInput.value > getTodayStr()) dateInput.value = getTodayStr();
+                inputWeekday.textContent = getWeekdayStr(dateInput.value);
+            });
+
+            function updateTaskOptions() {
+                let subj = subjectSelect.value;
+                let tasks = taskMap[subj] || ['其他'];
+                taskSelect.innerHTML = '';
+                tasks.forEach(t => {
+                    let opt = document.createElement('option');
+                    opt.value = t;
+                    opt.textContent = t;
+                    taskSelect.appendChild(opt);
+                });
+                taskSelect.value = tasks[0];
+                toggleOtherHint();
+            }
+            function toggleOtherHint() {
+                if (taskSelect.value === '其他') {
+                    otherHint.style.display = 'block';
+                    noteInput.placeholder = '请务必填写具体事项…';
+                } else {
+                    otherHint.style.display = 'none';
+                    noteInput.placeholder = '一句话回顾收获或问题…';
+                }
+            }
+            subjectSelect.addEventListener('change', updateTaskOptions);
+            taskSelect.addEventListener('change', toggleOtherHint);
+            updateTaskOptions();
+
+            function saveAndRender() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+                renderAll();
+            }
+
+            function addRecord(date, period, subject, duration, task, note) {
+                if (task === '其他' && !note.trim()) {
+                    if (!confirm('你选择了“其他”事项，但内容简纪为空，仍然添加吗？')) return;
+                }
+                records.push({
+                    date,
+                    weekday: getWeekdayStr(date),
+                    period,
+                    subject,
+                    duration: parseInt(duration) || 0,
+                    task: task === '其他' ? '其他' : task,
+                    note: note || ''
+                });
+                records.sort((a,b) => a.date.localeCompare(b.date));
+                saveAndRender();
+            }
+
+            function deleteRecord(index) {
+                if(confirm('确定删除这条记录吗？')) {
+                    records.splice(index,1);
+                    saveAndRender();
+                }
+            }
+            window.deleteRecordById = (index) => deleteRecord(index);
+
+            function checkMissing() {
+                if (records.length === 0) { alertBox.classList.add('hidden'); return; }
+                let check = new Date(getTodayStr());
+                check.setDate(check.getDate() - 1);
+                let yesterday = check.toISOString().slice(0,10);
+                let hasYesterday = records.some(r => r.date === yesterday);
+                if (!hasYesterday) {
+                    alertMsg.textContent = `⚠️ 昨天 (${formatDate(yesterday)} ${getWeekdayStr(yesterday)}) 没有登记，需要补上吗？`;
+                    alertBox.classList.remove('hidden');
+                    document.getElementById('btnFill').onclick = ()=>{
+                        dateInput.value = yesterday;
+                        inputWeekday.textContent = getWeekdayStr(yesterday);
+                        alertBox.classList.add('hidden');
+                        window.scrollTo({top:0, behavior:'smooth'});
+                    };
+                    document.getElementById('btnRest').onclick = ()=>{
+                        addRecord(yesterday, '周一至周五晚自习后', '休息', 0, '休息', '休息日');
+                        alertBox.classList.add('hidden');
+                    };
+                } else {
+                    alertBox.classList.add('hidden');
+                }
+            }
+
+            let currentRange = 'week';
+            document.querySelectorAll('.stat-controls button').forEach(btn => {
+                btn.addEventListener('click', function(){
+                    document.querySelectorAll('.stat-controls button').forEach(b=>b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentRange = this.dataset.range;
+                    renderStatistics(currentRange);
+                });
+            });
+
+            function getFiltered(range) {
+                let today = getTodayStr();
+                let start, end;
+                if (range === 'week') {
+                    let d = new Date(today);
+                    let day = d.getDay();
+                    let monday = new Date(d);
+                    monday.setDate(d.getDate() - (day===0?6:day-1));
+                    start = monday.toISOString().slice(0,10);
+                    let sunday = new Date(monday);
+                    sunday.setDate(monday.getDate()+6);
+                    end = sunday.toISOString().slice(0,10);
+                } else if (range === 'month') {
+                    let d = new Date(today);
+                    start = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+                    let lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+                    end = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+                } else {
+                    start='2000-01-01'; end='2099-12-31';
+                }
+                return records.filter(r => r.date >= start && r.date <= end && r.subject !== '休息');
+            }
+
+            function renderStatistics(range) {
+                let filtered = getFiltered(range);
+                if (filtered.length === 0) {
+                    statisticsDiv.innerHTML = '<p style="color:#aaa;">该时间段暂无学习记录。</p>';
+                    return;
+                }
+                let map = new Map();
+                filtered.forEach(r => map.set(r.subject, (map.get(r.subject)||0) + r.duration));
+                let entries = [...map.entries()].sort((a,b)=>b[1]-a[1]);
+                let total = entries.reduce((s,e)=>s+e[1],0);
+                let max = entries[0][1];
+
+                let html = `<table style="width:100%; margin-bottom:12px;">`;
+                entries.forEach(([subj, mins]) => {
+                    let pct = total>0 ? (mins/total*100).toFixed(1) : 0;
+                    let barW = max>0 ? (mins/max*100).toFixed(0) : 0;
+                    html += `<tr>
+                        <td style="width:70px;"><b>${subj}</b></td>
+                        <td style="width:70px;">${mins}分</td>
+                        <td style="width:60px;">${pct}%</td>
+                        <td><div class="bar-container"><div class="bar-fill" style="width:${barW}%;"></div></div></td>
+                    </tr>`;
+                });
+                html += `</table>`;
+                html += `<p>📌 总学习时长：<b>${total}分钟</b> (${(total/60).toFixed(1)}小时)</p>`;
+                if (entries.length > 0) {
+                    html += `<p>🔍 投入最多：<b>${entries[0][0]}</b>，最少：<b>${entries[entries.length-1][0]}</b></p>`;
+                }
+                statisticsDiv.innerHTML = html;
+            }
+
+            function renderRecords() {
+                if (!records.length) {
+                    recordsDiv.innerHTML = '<p style="color:#aaa;">还没有记录，开始你的第一次登记吧。</p>';
+                    return;
+                }
+                let recent = records.slice(-20).reverse();
+                recordsDiv.innerHTML = recent.map(r => {
+                    let idx = records.indexOf(r);
+                    return `<div class="record-item">
+                        <div>
+                            <span style="color:#636e72;">${r.date} ${r.weekday}</span>
+                            <span class="subject-tag">${r.subject}</span>
+                            <span style="margin-right:8px;">${r.period}</span>
+                            <span style="font-weight:bold;">${r.duration}分钟</span>
+                            <div style="font-size:0.85rem; color:#555;">${r.task} ${r.note ? '📌'+r.note : ''}</div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteRecordById(${idx})">🗑️</button>
+                    </div>`;
+                }).join('');
+            }
+
+            document.getElementById('exportBtn').addEventListener('click', ()=>{
+                let blob = new Blob([JSON.stringify(records, null, 2)], {type:'application/json'});
+                let url = URL.createObjectURL(blob);
+                let a = document.createElement('a');
+                a.href = url;
+                a.download = `学习记录备份_${getTodayStr()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            document.getElementById('importBtn').addEventListener('click', ()=>{
+                let input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    let file = e.target.files[0];
+                    if(!file) return;
+                    let reader = new FileReader();
+                    reader.onload = (ev) => {
+                        try {
+                            let imported = JSON.parse(ev.target.result);
+                            if (!Array.isArray(imported)) throw new Error();
+                            let merge = confirm('导入将“合并”到现有数据（不会清空），继续吗？');
+                            if (merge) {
+                                let existingSet = new Set(records.map(r=>r.date+r.period+r.subject+r.task));
+                                imported.forEach(r => {
+                                    if (!existingSet.has(r.date+r.period+r.subject+r.task)) {
+                                        records.push(r);
+                                    }
+                                });
+                                records.sort((a,b)=>a.date.localeCompare(b.date));
+                                saveAndRender();
+                                alert('导入成功！');
+                            }
+                        } catch(err) {
+                            alert('文件格式错误，请选择正确的备份文件。');
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            });
+
+            document.getElementById('addRecordBtn').addEventListener('click', ()=>{
+                let date = dateInput.value;
+                let period = periodSelect.value;
+                let subject = subjectSelect.value;
+                let duration = durationInput.value;
+                let task = taskSelect.value;
+                let note = noteInput.value.trim();
+                if (!date || !subject) { alert('请选择日期和学科'); return; }
+                if (isNaN(duration) || duration < 0) { alert('请输入有效的学习时长'); return; }
+                addRecord(date, period, subject, duration, task, note);
+                durationInput.value = 45;
+                noteInput.value = '';
+                resetDateToToday();
+                updateTaskOptions();
+            });
+
+            function updateSubtitle() {
+                let today = getTodayStr();
+                let todayRecs = records.filter(r=>r.date===today);
+                let mins = todayRecs.reduce((s,r)=>s+r.duration, 0);
+                subtitleDiv.innerHTML = `📅 ${formatDate(today)} ${getWeekdayStr(today)}  |  今日已学 ${mins} 分钟`;
+            }
+
+            function renderAll() {
+                renderRecords();
+                renderStatistics(currentRange);
+                checkMissing();
+                updateSubtitle();
+            }
+
+            resetDateToToday();
+            renderAll();
+            setInterval(checkMissing, 30*60*1000);
+        })();
+    </script>
+</body>
+</html>

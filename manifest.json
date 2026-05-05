@@ -1,0 +1,17 @@
+{
+  "name": "日拱一卒 · 学习登记",
+  "short_name": "日拱一卒",
+  "description": "高二家庭学习记录工具，支持学科统计与家长同步",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0f4f8",
+  "theme_color": "#0984e3",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>",
+      "sizes": "100x100",
+      "type": "image/svg+xml"
+    }
+  ]
+}
